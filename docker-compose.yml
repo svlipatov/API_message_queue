@@ -1,0 +1,62 @@
+version: '3.7'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    ports:
+       - 5672:5672
+       - 15672:15672
+
+  features:
+    build:
+      context: ./features
+    restart: always
+    volumes:
+      - ./features/src:/usr/src/app/src
+    working_dir: /usr/src/app
+    command: python src/features.py
+    depends_on:
+      - rabbitmq
+
+  model:
+    build:
+      context: ./model
+    restart: always
+    volumes:
+      - ./model/src:/usr/src/app/src
+    working_dir: /usr/src/app
+    command: python src/model.py
+    depends_on:
+      - rabbitmq
+      - features
+
+  metric:
+    build:
+      context: ./metric
+    restart: always
+    volumes:
+      - ./metric/src:/usr/src/app/src
+      - ./metric/logs:/usr/src/app/logs
+    working_dir: /usr/src/app
+    command: python src/metric.py
+    depends_on:
+      - rabbitmq
+      - features
+      - model
+
+  plot:
+    build:
+      context: ./plot
+    restart: always
+    volumes:
+      - ./metric/logs:/usr/src/app/logs
+      - ./plot/logs:/usr/src/app/plot_logs
+    working_dir: /usr/src/app
+    command: python src/plot.py
+    depends_on:
+      - rabbitmq
+      - features
+      - model
+      - metric
